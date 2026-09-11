@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vantage</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>window.Chart || document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"><\/script>');</script>
+<style>
+  :root{
+    --bg:#0e1118; --bg2:#131721; --surface:#181d29; --surface2:#1f2534; --line:#293040; --line2:#343c4f;
+    --text:#e9ecf3; --muted:#8f97ab; --faint:#5f677a;
+    --accent:#2dd4bf; --accent-ink:#0b2f2b;
+    --good:#34d399; --warn:#fbbf24; --crit:#fb7185; --info:#60a5fa;
+    --font:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{min-height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;padding:0 26px 60px}
+  @media (max-width:600px){body{padding:0 16px 40px}}
+  button{font-family:inherit;color:inherit}
+  ::selection{background:var(--accent);color:var(--accent-ink)}
+
+  /* ---------- top: brand + ask ---------- */
+  .top{max-width:1360px;margin:0 auto;padding-top:18px}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+  .brand .mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#60a5fa);display:grid;place-items:center;color:#06201d;font-weight:800;font-size:14px}
+  .brand b{font-size:15px;font-weight:800;letter-spacing:-.01em}
+  .brand span{color:var(--faint);font-size:12.5px}
+  .brand .pulse{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase}
+  .brand .pulse i{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 rgba(52,211,153,.6);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.55)}70%{box-shadow:0 0 0 7px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+
+  .ask{max-width:820px;margin:0 auto}
+  .ask h1{font-size:28px;font-weight:800;letter-spacing:-.02em;margin:0 0 4px;text-align:center;text-wrap:balance}
+  .ask p.lead{color:var(--muted);text-align:center;margin:0 0 16px;font-size:15px}
+  .box{background:var(--surface);border:1px solid var(--line2);border-radius:16px;padding:12px 12px 10px;transition:border-color .15s,box-shadow .15s;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,212,191,.15),0 12px 40px rgba(0,0,0,.25)}
+  .box textarea{width:100%;border:0;background:transparent;color:var(--text);font:inherit;font-size:16px;resize:none;outline:none;min-height:52px;max-height:180px;line-height:1.45;padding:4px 6px}
+  .box textarea::placeholder{color:var(--faint)}
+  .tools{display:flex;align-items:center;gap:8px;margin-top:4px}
+  .ibtn{background:transparent;border:1px solid var(--line2);border-radius:10px;width:36px;height:36px;display:grid;place-items:center;cursor:pointer;color:var(--muted);transition:.15s}
+  .ibtn:hover,.ibtn:focus-visible{border-color:var(--accent);color:var(--text);outline:none}
+  .ibtn.rec{border-color:var(--crit);color:var(--crit);animation:pulse 1.4s infinite}
+  .ibtn[hidden]{display:none}
+  .tools .over{background:transparent;border:0;color:var(--faint);font-size:12.5px;cursor:pointer;padding:6px 8px;border-radius:8px}
+  .tools .over:hover{color:var(--text);background:var(--surface2)}
+  .send{margin-left:auto;background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;height:36px;padding:0 18px;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s}
+  .send:hover{filter:brightness(1.08)}
+  .send:disabled{opacity:.6;cursor:default}
+
+  .reply{max-width:820px;margin:14px auto 0;display:flex;gap:10px;align-items:flex-start;min-height:44px}
+  .reply .av{width:24px;height:24px;border-radius:7px;background:var(--surface2);border:1px solid var(--line2);display:grid;place-items:center;flex:none;color:var(--accent);font-weight:800;font-size:12px;margin-top:1px}
+  .reply .txt{color:var(--muted);font-size:14px;line-height:1.5}
+  .reply .txt b{color:var(--text);font-weight:700}
+  .reply .cur{display:inline-block;width:7px;height:14px;background:var(--accent);vertical-align:-2px;margin-left:2px;animation:blink 1s steps(2) infinite}
+  @keyframes blink{to{opacity:0}}
+  .reply .steps{display:flex;flex-wrap:wrap;gap:6px 14px;font-family:var(--mono);font-size:11.5px;letter-spacing:.02em;color:var(--faint)}
+  .reply .step{display:flex;align-items:center;gap:6px}
+  .reply .step i{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--line2);display:inline-block}
+  .reply .step.on{color:var(--text)}
+  .reply .step.on i{border-color:var(--accent);border-top-color:transparent;animation:spin .9s linear infinite}
+  .reply .step.done{color:var(--muted)}
+  .reply .step.done i{background:var(--good);border-color:var(--good)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---------- dashboard ---------- */
+  .dash{max-width:1360px;margin:26px auto 0;transition:opacity .3s,transform .3s}
+  .dash.dim{opacity:.25;transform:translateY(4px);pointer-events:none}
+  .dash-head{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-end;margin-bottom:12px}
+  .dash-head .t{min-width:0;flex:1 1 380px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+  .dash-head h2{font-size:24px;line-height:1.15;margin:0;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+  .dash-head p{margin:5px 0 0;color:var(--muted);font-size:14px;max-width:72ch}
+  .persona{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:12px;font-weight:600;color:var(--text);white-space:nowrap}
+  .pill .k{color:var(--faint);font-weight:500}
+  .pill.ai{border-color:rgba(45,212,191,.4)}
+
+  .grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}
+  .section{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin-top:10px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .section:after{content:"";flex:1;height:1px;background:var(--line)}
+  .w{grid-column:span var(--w,4);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-width:0;display:flex;flex-direction:column;gap:10px;animation:rise .5s both}
+  @media (max-width:1100px){.w{grid-column:span max(var(--w,4),6)}}
+  @media (max-width:700px){.w{grid-column:1/-1}}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.w,.reply .step.on i,.brand .pulse i,.ibtn.rec,.reply .cur{animation:none}}
+  .w h3{margin:0;font-size:12.5px;font-weight:700;color:var(--muted);display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .w h3 span{font-family:var(--mono);font-size:10.5px;color:var(--faint);font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+  .w .chart{position:relative;height:220px;min-width:0}
+  .w.tall .chart{height:250px}
+
+  .kpi .val{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+  .kpi .row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+  .kpi .delta{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;border-radius:6px;padding:3px 7px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .kpi .delta.up{background:rgba(52,211,153,.13);color:var(--good)}
+  .kpi .delta.down{background:rgba(251,113,133,.13);color:var(--crit)}
+  .kpi .delta.flat{background:rgba(143,151,171,.13);color:var(--muted)}
+  .kpi .sub{color:var(--faint);font-size:12px}
+  .kpi svg{width:100%;height:38px;display:block}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-weight:500;white-space:nowrap}
+  td{padding:7px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.num,th.num{text-align:right}
+  tr:last-child td{border-bottom:0}
+  .tblwrap{overflow-x:auto;margin:0 -6px}
+  .tag{display:inline-block;border-radius:6px;padding:2px 7px;font-size:11.5px;font-weight:700}
+  .tag.good{background:rgba(52,211,153,.14);color:var(--good)}.tag.warn{background:rgba(251,191,36,.14);color:var(--warn)}.tag.crit{background:rgba(251,113,133,.14);color:var(--crit)}.tag.info{background:rgba(96,165,250,.14);color:var(--info)}.tag.neutral{background:rgba(143,151,171,.14);color:var(--muted)}
+
+  .list{display:flex;flex-direction:column}
+  .item{display:grid;grid-template-columns:8px 1fr auto;gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .item:last-child{border-bottom:0}
+  .item i{width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--muted)}
+  .item.good i{background:var(--good)}.item.warn i{background:var(--warn)}.item.crit i{background:var(--crit);box-shadow:0 0 0 3px rgba(251,113,133,.18)}.item.info i{background:var(--info)}
+  .item .m{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap}
+
+  .prog{display:flex;flex-direction:column;gap:10px}
+  .prog .p{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:13px}
+  .prog .bar{grid-column:1/-1;height:6px;border-radius:99px;background:var(--surface2);overflow:hidden}
+  .prog .bar b{display:block;height:100%;border-radius:99px;background:var(--accent)}
+  .prog .bar b.warn{background:var(--warn)}.prog .bar b.crit{background:var(--crit)}
+  .prog .v{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+  .ins-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .ins{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.45;border-left:3px solid var(--accent)}
+  .ins.warn{border-left-color:var(--warn)}.ins.crit{border-left-color:var(--crit)}.ins.good{border-left-color:var(--good)}
+  .ins b{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-family:var(--mono);margin-bottom:4px;font-weight:500}
+
+  .todo{display:flex;flex-direction:column}
+  .todo label{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
+  .todo label:last-child{border-bottom:0}
+  .todo input{margin-top:3px;accent-color:var(--accent)}
+  .todo input:checked+span{color:var(--faint);text-decoration:line-through}
+
+  .toast{position:fixed;bottom:16px;right:16px;background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:10px 14px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:360px;opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none}
+  .toast.on{opacity:1;transform:none}
+</style>
+
+</head>
+<body>
+<div class="top">
+  <div class="brand"><div class="mark">V</div><b>Vantage</b><span>· dashboards from a sentence</span><div class="pulse" id="status"><i></i><span>agent ready</span></div></div>
+  <div class="ask">
+    <h1 id="h1">Who is this dashboard for?</h1>
+    <p class="lead" id="lead">Describe the person and what they need to keep an eye on. The agent designs the rest.</p>
+    <div class="box">
+      <textarea id="input" rows="2" placeholder="e.g. A sales manager who needs to see sales, marketing, and open customer service tickets" autofocus></textarea>
+      <div class="tools">
+        <button class="ibtn" id="mic" title="Speak your request" aria-label="Speak your request" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        </button>
+        <button class="over" id="reset" hidden>Start over</button>
+        <button class="send" id="send">Build it <span aria-hidden="true">→</span></button>
+      </div>
+    </div>
+    <div class="reply" id="reply" hidden><div class="av">V</div><div class="txt" id="replyTxt"></div></div>
+  </div>
+</div>
+
+<main class="dash" id="dash" hidden>
+  <div class="dash-head" id="head"></div>
+  <div class="grid" id="grid"></div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+  // =====================================================================
+  //  DATA BANK — coherent dummy data, generated deterministically
+  // =====================================================================
+  const rng = (seed) => () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const ser = (seed, n, base, growth, noise, dp = 0) => { const r = rng(seed); const out = []; let v = base; for (let i = 0; i < n; i++) { const jitter = 1 + (r() - 0.5) * 2 * noise; out.push(+(v * jitter).toFixed(dp)); v *= 1 + growth; } return out; };
+  const MONTHS = ["Oct","Nov","Dec","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep"];
+  const WEEKS = ["Jul 20","Jul 27","Aug 3","Aug 10","Aug 17","Aug 24","Aug 31","Sep 7"];
+  const DAYS14 = ["Aug 29","Aug 30","Aug 31","Sep 1","Sep 2","Sep 3","Sep 4","Sep 5","Sep 6","Sep 7","Sep 8","Sep 9","Sep 10","Sep 11"];
+  const money = (n) => { const a = Math.abs(n); return "$" + (a >= 1e6 ? (n / 1e6).toFixed(2) + "M" : a >= 1e3 ? (n / 1e3).toFixed(0) + "K" : n.toFixed(0)); };
+  const pct = (a, b) => ((a - b) / b * 100);
+  const kpiFrom = (title, s, fmtV, sub, goodUp = true, unitLabel = "") => { const last = s[s.length - 1], prev = s[s.length - 2]; const d = pct(last, prev); return { type: "kpi", title, value: fmtV(last), delta: (d >= 0 ? "+" : "") + d.toFixed(1) + "%", trend: d > 0.3 ? "up" : d < -0.3 ? "down" : "flat", good: d > 0.3 ? goodUp : d < -0.3 ? !goodUp : null, sub, spark: s.slice(-12), w: 3 }; };
+  const kpi = (title, value, delta, trend, good, sub, spark) => ({ type: "kpi", title, value, delta, trend, good, sub, spark, w: 3 });
+
+  const revenue = ser(11, 12, 690000, 0.028, 0.05);
+  const target = revenue.map((v, i) => Math.round(690000 * Math.pow(1.03, i) / 1000) * 1000);
+  const leadsOrganic = ser(21, 8, 420, 0.03, 0.08), leadsPaid = ser(22, 8, 310, 0.04, 0.1), leadsRef = ser(23, 8, 140, 0.02, 0.12);
+  const opened = ser(31, 14, 62, 0.012, 0.18), resolved = opened.map((v, i) => Math.round(v * (i < 9 ? 1.02 : 0.86)));
+  const expenses = ser(41, 12, 610000, 0.012, 0.04);
+  const headcount = ser(51, 12, 118, 0.017, 0.006).map(Math.round);
+  const shipped = ser(61, 14, 1180, 0.006, 0.09).map(Math.round), backlog = ser(62, 14, 260, 0.02, 0.1).map(Math.round);
+  const dau = ser(71, 14, 22400, 0.008, 0.06).map(Math.round);
+  const nrr = ser(81, 12, 106, 0.005, 0.01, 1);
+  const stockVal = ser(91, 12, 1720000, 0.008, 0.03);
+
+  const D = {
+    sales: { name: "Sales", role: "Sales Manager", keys: ["sales","revenue","pipeline","deal","quota","booking","account exec","sdr","crm","selling","sell"],
+      why: "Sales opens with revenue against target and the pipeline feeding it, since that is what a sales lead answers for first.",
+      kpis: [kpiFrom("Revenue this month", revenue, money, "vs last month · target " + money(target[11]), true), kpi("Open pipeline", "$4.82M", "+6.4%", "up", true, "weighted · 3.6× coverage", [3.9,4.0,4.1,4.0,4.3,4.4,4.5,4.4,4.6,4.7,4.7,4.82]), kpi("Win rate", "31.2%", "+1.8 pts", "up", true, "closed-won, trailing 90d", [27,28,28.5,29,29.4,29,30.1,30.4,30.8,30.5,31,31.2]), kpi("Avg deal size", "$18.4K", "-2.1%", "down", false, "closed-won, trailing 90d", [19.2,19.4,19,18.9,19.1,18.7,18.8,18.6,18.9,18.5,18.8,18.4])],
+      main: { type: "line", title: "Revenue vs target", w: 8, unit: "$", labels: MONTHS, series: [{ name: "Revenue", data: revenue }, { name: "Target", data: target }] },
+      side: { type: "donut", title: "Revenue by region", w: 4, labels: ["West","East","Central","EMEA"], data: [34,28,22,16] },
+      table: { type: "table", title: "Top open deals", w: 8, columns: ["Deal","Owner","Value","Stage","Close","Status"], rows: [["Northwind Logistics","Priya N.","$240K","Negotiation","Sep 19","good"],["Halvorsen Retail Group","Marcus T.","$185K","Proposal","Sep 26","warn"],["Cobalt Health","Dana R.","$142K","Negotiation","Sep 30","good"],["Summit Outdoor Co.","Priya N.","$96K","Qualified","Oct 8","neutral"],["Beacon Financial","Luis A.","$88K","Proposal","Oct 14","crit"],["Ridgeline Manufacturing","Marcus T.","$74K","Discovery","Oct 22","neutral"]] },
+      list: { type: "list", title: "Deals needing attention", w: 4, items: [{ text: "Beacon Financial went quiet after pricing — 11 days, no reply", status: "crit", meta: "11d" }, { text: "Halvorsen legal review slipping past the Sep 26 close date", status: "warn", meta: "3d" }, { text: "Northwind verbal yes — contract out for signature", status: "good", meta: "today" }, { text: "Q3 quota at 84% with 19 days left", status: "warn", meta: "Q3" }] },
+      bar: { type: "bar", title: "Pipeline by stage", w: 6, unit: "$", labels: ["Discovery","Qualified","Proposal","Negotiation"], series: [{ name: "Weighted value", data: [1920000,1310000,940000,650000] }] } },
+    marketing: { name: "Marketing", role: "Marketing Manager", keys: ["marketing","campaign","lead","leads","seo","ads","advertising","brand","content","social","email","website","traffic","funnel","mql","cmo"],
+      why: "Marketing shows lead flow by channel next to cost per lead, so spend decisions and hand-offs to sales sit in one place.",
+      kpis: [kpi("MQLs this month", "1,284", "+9.1%", "up", true, "vs last month", [880,910,960,990,1040,1020,1110,1150,1180,1210,1177,1284]), kpi("Cost per lead", "$42", "-6.3%", "down", true, "blended, all channels", [51,50,49,48,48,47,46,45,45,44,45,42]), kpi("Website sessions", "86.3K", "+12.4%", "up", true, "last 30 days", [61,63,64,66,68,70,71,74,75,77,77,86]), kpi("Lead → opportunity", "14.2%", "+0.8 pts", "up", true, "conversion, trailing 30d", [12.1,12.4,12.6,12.8,13,13.1,13.3,13.4,13.6,13.7,13.4,14.2])],
+      main: { type: "line", title: "Leads by channel (weekly)", w: 8, unit: "#", labels: WEEKS, series: [{ name: "Organic", data: leadsOrganic }, { name: "Paid", data: leadsPaid }, { name: "Referral", data: leadsRef }] },
+      side: { type: "donut", title: "Spend by channel", w: 4, labels: ["Paid search","Social","Events","Content","Email"], data: [38,24,18,12,8] },
+      table: { type: "table", title: "Active campaigns", w: 8, columns: ["Campaign","Channel","Spend","Leads","CPL","Status"], rows: [["Fall Launch — search","Paid search","$18.2K","412","$44","good"],["Retarget: pricing page","Social","$6.1K","188","$32","good"],["Ops Summit sponsorship","Events","$14.0K","96","$146","warn"],["Buyer's guide (gated)","Content","$3.4K","171","$20","good"],["Reactivation drip","Email","$900","74","$12","good"],["LinkedIn thought leadership","Social","$5.2K","41","$127","crit"]] },
+      list: { type: "list", title: "Marketing watch-list", w: 4, items: [{ text: "LinkedIn CPL is 3× target — pause or rework creative", status: "crit", meta: "today" }, { text: "Fall Launch landing page converting at 6.8% (best ever)", status: "good", meta: "2d" }, { text: "Event leads from Ops Summit not yet routed to sales", status: "warn", meta: "4d" }, { text: "Q4 content calendar due for review Friday", status: "info", meta: "Fri" }] },
+      bar: { type: "bar", title: "Leads by source (this month)", w: 6, unit: "#", labels: ["Organic","Paid search","Social","Referral","Events","Email"], series: [{ name: "Leads", data: [468,412,229,146,96,74] }] } },
+    support: { name: "Customer Service", role: "Support Team Lead", keys: ["ticket","tickets","support","customer service","helpdesk","help desk","csat","service desk","complaints","customer care","sla","escalation","cs team"],
+      why: "Customer service leads with the open-ticket backlog and response time, then breaks the backlog down by priority so the urgent ones are visible immediately.",
+      kpis: [kpi("Open tickets", "148", "+12.1%", "up", false, "vs last week · 9 urgent", [112,118,121,119,126,130,128,135,139,132,141,148]), kpi("Avg first response", "1h 42m", "-18%", "down", true, "target 2h · last 7 days", [2.6,2.5,2.4,2.4,2.3,2.2,2.1,2.0,2.0,1.9,1.8,1.7]), kpi("CSAT", "4.6 / 5", "+0.1", "up", true, "312 ratings this month", [4.3,4.4,4.4,4.5,4.4,4.5,4.5,4.6,4.5,4.6,4.6,4.6]), kpi("SLA breaches", "7", "+3", "up", false, "this week · 4 last week", [2,3,2,4,3,3,5,4,4,6,4,7])],
+      main: { type: "line", title: "Tickets opened vs resolved (daily)", w: 8, unit: "#", labels: DAYS14, series: [{ name: "Opened", data: opened.map(Math.round) }, { name: "Resolved", data: resolved }] },
+      side: { type: "bar", title: "Open tickets by priority", w: 4, unit: "#", labels: ["Urgent","High","Normal","Low"], series: [{ name: "Open", data: [9,31,76,32] }] },
+      table: { type: "table", title: "Oldest open tickets", w: 8, columns: ["Ticket","Subject","Customer","Priority","Age","Status"], rows: [["#4821","Duplicate charges on annual plan","Cobalt Health","crit","3d 4h","crit"],["#4835","SSO login loop after update","Halvorsen Retail","crit","2d 9h","crit"],["#4840","Export missing Q2 rows","Summit Outdoor","warn","2d 1h","warn"],["#4852","Invoice PDF shows wrong address","Beacon Financial","neutral","1d 18h","warn"],["#4861","Feature request: bulk edit","Ridgeline Mfg.","neutral","1d 3h","neutral"],["#4877","Mobile app crash on upload","Northwind Logistics","warn","16h","warn"]] },
+      list: { type: "list", title: "Escalations", w: 4, items: [{ text: "Cobalt Health billing issue escalated to finance — refund pending", status: "crit", meta: "3d" }, { text: "SSO loop affects 3 accounts; engineering fix ETA tomorrow", status: "crit", meta: "2d" }, { text: "Backlog up 12% since the Fall Launch — 2 agents on overtime", status: "warn", meta: "wk" }, { text: "CSAT holding at 4.6 despite the volume", status: "good", meta: "mo" }] },
+      donut: { type: "donut", title: "Open tickets by category", w: 4, labels: ["Bugs","Billing","Login & access","How-to","Other"], data: [41,38,29,26,14] } },
+    finance: { name: "Finance", role: "Finance Manager", keys: ["finance","financial","cash","burn","budget","invoice","expenses","expense","p&l","profit","margin","cfo","accounting","spend","runway","cost"],
+      why: "Finance keeps cash, burn and runway up front, with revenue against expenses over time so trends show before they become problems.",
+      kpis: [kpi("Cash on hand", "$3.41M", "-4.2%", "down", false, "vs last month", [4.2,4.1,4.0,3.95,3.9,3.8,3.75,3.7,3.6,3.55,3.56,3.41]), kpi("Net burn", "$212K", "+3.1%", "up", false, "per month, trailing 3", [190,195,198,200,204,205,207,208,210,206,205,212]), kpi("Runway", "16 mo", "-1", "down", false, "at current burn", [22,21,20,20,19,19,18,18,17,17,17,16]), kpi("Gross margin", "68.4%", "+1.2 pts", "up", true, "trailing 3 months", [64,64.5,65,65.2,65.8,66,66.4,66.9,67.1,67.3,67.2,68.4])],
+      main: { type: "line", title: "Revenue vs expenses", w: 8, unit: "$", labels: MONTHS, series: [{ name: "Revenue", data: revenue }, { name: "Expenses", data: expenses }] },
+      side: { type: "donut", title: "Expenses by department", w: 4, labels: ["Payroll","Marketing","Cloud & tools","Facilities","Other"], data: [58,15,12,9,6] },
+      table: { type: "table", title: "Overdue invoices", w: 8, columns: ["Customer","Invoice","Amount","Due","Days late","Status"], rows: [["Halvorsen Retail Group","INV-2291","$48,200","Aug 12","30","crit"],["Summit Outdoor Co.","INV-2304","$12,750","Aug 25","17","warn"],["Beacon Financial","INV-2310","$31,000","Aug 29","13","warn"],["Ridgeline Manufacturing","INV-2318","$8,400","Sep 3","8","neutral"],["Cobalt Health","INV-2325","$22,900","Sep 8","3","neutral"]] },
+      list: { type: "list", title: "Finance flags", w: 4, items: [{ text: "AR over 30 days climbed to $92K — 4 accounts", status: "crit", meta: "today" }, { text: "Cloud spend +18% MoM after the Fall Launch traffic", status: "warn", meta: "mo" }, { text: "Q3 board pack due Sep 25", status: "info", meta: "Sep 25" }, { text: "Gross margin best in 12 months", status: "good", meta: "mo" }] },
+      bar: { type: "bar", title: "Monthly expenses by department", w: 6, unit: "$", labels: ["Payroll","Marketing","Cloud & tools","Facilities","Travel","Other"], series: [{ name: "August", data: [356000,92000,74000,55000,18000,37000] }] } },
+    people: { name: "People", role: "People Operations Manager", keys: ["hr","human resources","hiring","recruit","people","headcount","employee","employees","team","staff","attrition","turnover","onboarding","payroll","chro"],
+      why: "People shows headcount, open roles and attrition first, then who is starting or leaving this week.",
+      kpis: [kpi("Headcount", String(headcount[11]), "+" + (headcount[11] - headcount[10]), "up", true, "full-time · 9 contractors", headcount), kpi("Open roles", "9", "-2", "down", true, "4 in final round", [12,12,11,13,12,11,11,10,11,10,11,9]), kpi("Attrition (12 mo)", "8.1%", "-0.6 pts", "down", true, "industry avg 12%", [10.2,10,9.8,9.6,9.4,9.1,9,8.8,8.7,8.6,8.7,8.1]), kpi("Time to hire", "31 days", "-4", "down", true, "median, trailing 90d", [40,39,38,38,37,36,35,35,34,33,35,31])],
+      main: { type: "line", title: "Headcount over time", w: 8, unit: "#", labels: MONTHS, series: [{ name: "Headcount", data: headcount }] },
+      side: { type: "donut", title: "Headcount by department", w: 4, labels: ["Engineering","Sales","Support","Marketing","Ops","G&A"], data: [48,26,24,14,18,12] },
+      table: { type: "table", title: "Open roles", w: 8, columns: ["Role","Department","Hiring manager","Stage","Days open","Status"], rows: [["Senior Backend Engineer","Engineering","Ana K.","Final round","44","warn"],["Account Executive (West)","Sales","Priya N.","Offer out","29","good"],["Support Specialist","Support","Jordan M.","Screening","12","neutral"],["Product Designer","Product","Sam O.","Onsite","38","warn"],["Sales Development Rep","Sales","Priya N.","Sourcing","6","neutral"]] },
+      list: { type: "list", title: "This week", w: 4, items: [{ text: "3 new hires start Monday — laptops and accounts ready?", status: "info", meta: "Mon" }, { text: "Engineering 1:1 completion at 62% this cycle", status: "warn", meta: "wk" }, { text: "Open enrollment closes Sep 30", status: "info", meta: "Sep 30" }, { text: "eNPS up to 41 (from 34)", status: "good", meta: "Q3" }] },
+      bar: { type: "bar", title: "Hires vs departures", w: 6, unit: "#", labels: ["Apr","May","Jun","Jul","Aug","Sep"], series: [{ name: "Hires", data: [4,3,5,6,4,3] }, { name: "Departures", data: [1,2,1,2,1,1] }] } },
+    ops: { name: "Operations", role: "Operations Manager", keys: ["operations","ops","warehouse","logistics","fulfillment","fulfilment","shipping","delivery","deliveries","orders","supply chain","dispatch","fleet","production","manufacturing","plant","coo"],
+      why: "Operations leads with today's throughput and on-time rate, with the backlog and delayed orders right beside them.",
+      kpis: [kpi("Orders shipped today", "1,284", "+4.6%", "up", true, "vs 7-day average", shipped.slice(-12)), kpi("On-time rate", "94.2%", "-1.1 pts", "down", false, "target 96% · last 7 days", [95.8,95.9,96.1,95.6,95.4,95.9,95.5,95.1,94.9,95.3,95.0,94.2]), kpi("Backlog", "312", "+9.8%", "up", false, "orders past promise date", backlog.slice(-12)), kpi("Avg cycle time", "2.1 days", "-0.2", "down", true, "order to ship", [2.6,2.5,2.5,2.4,2.4,2.3,2.4,2.3,2.2,2.3,2.2,2.1])],
+      main: { type: "line", title: "Shipped vs backlog (daily)", w: 8, unit: "#", labels: DAYS14, series: [{ name: "Shipped", data: shipped }, { name: "Backlog", data: backlog }] },
+      side: { type: "bar", title: "Throughput by facility", w: 4, unit: "#", labels: ["Reno","Columbus","Dallas","Newark"], series: [{ name: "Orders / day", data: [412,368,296,208] }] },
+      table: { type: "table", title: "Delayed orders", w: 8, columns: ["Order","Customer","Facility","Promised","Reason","Status"], rows: [["SO-88214","Halvorsen Retail Group","Newark","Sep 8","Carrier capacity","crit"],["SO-88230","Summit Outdoor Co.","Dallas","Sep 9","Stock-out: SKU 4471","crit"],["SO-88251","Cobalt Health","Reno","Sep 10","Address correction","warn"],["SO-88263","Ridgeline Manufacturing","Columbus","Sep 10","Pick error","warn"],["SO-88270","Beacon Financial","Newark","Sep 11","Carrier capacity","neutral"]] },
+      list: { type: "list", title: "Incidents & notes", w: 4, items: [{ text: "Newark carrier pickup missed twice this week — switch to backup carrier?", status: "crit", meta: "today" }, { text: "Dallas conveyor maintenance Saturday 6–10am", status: "info", meta: "Sat" }, { text: "Reno hit 99% pick accuracy for the month", status: "good", meta: "mo" }, { text: "Peak-season temp hiring at 70% of plan", status: "warn", meta: "wk" }] },
+      donut: { type: "donut", title: "Delay reasons (30d)", w: 4, labels: ["Carrier","Stock-outs","Pick errors","Address issues","Other"], data: [38,27,15,12,8] } },
+    inventory: { name: "Inventory", role: "Inventory Planner", keys: ["inventory","stock","sku","reorder","stockout","stock-out","warehouse stock","supplies"],
+      why: "Inventory leads with what is about to run out, then stock value and turnover so the reorder list has context.",
+      kpis: [kpi("SKUs below reorder point", "23", "+5", "up", false, "of 1,140 active SKUs", [14,15,17,16,18,19,18,20,21,19,18,23]), kpi("Stock value", money(stockVal[11]), "+2.1%", "up", null, "at cost", stockVal), kpi("Inventory turnover", "6.4×", "+0.3", "up", true, "annualized", [5.6,5.7,5.8,5.8,5.9,6,6,6.1,6.2,6.1,6.3,6.4]), kpi("Stock-outs (7d)", "4", "+2", "up", false, "customer-facing", [1,2,1,2,3,2,2,1,3,2,2,4])],
+      main: { type: "line", title: "Stock value over time", w: 8, unit: "$", labels: MONTHS, series: [{ name: "Stock value", data: stockVal }] },
+      side: { type: "bar", title: "Stock by category", w: 4, unit: "$", labels: ["Finished goods","Components","Packaging","Raw"], series: [{ name: "Value", data: [980000,510000,140000,260000] }] },
+      table: { type: "table", title: "Reorder now", w: 8, columns: ["SKU","Item","On hand","Days left","Supplier","Status"], rows: [["4471","Trail pack 32L — slate","38","4","Summit Supply","crit"],["2210","USB-C dock, 8-port","112","6","Kinetic Parts","crit"],["3305","Thermal labels 4×6 (case)","61","9","PakRight","warn"],["1187","Bottle 750ml — matte black","540","11","Vessel Co.","warn"],["5520","Replacement strap kit","210","14","Summit Supply","neutral"]] },
+      list: { type: "list", title: "Supply notes", w: 4, items: [{ text: "Summit Supply lead time up to 21 days (was 14)", status: "warn", meta: "wk" }, { text: "SKU 4471 stock-out caused 2 delayed orders", status: "crit", meta: "2d" }, { text: "Dead stock write-down candidates: 18 SKUs", status: "info", meta: "mo" }] } },
+    product: { name: "Product & Engineering", role: "Product Manager", keys: ["product","engineering","bug","bugs","uptime","release","deploy","sprint","users","dau","feature","developer","app","platform","cto","incident"],
+      why: "Product leads with active users and uptime, then the bug and incident picture that could threaten them.",
+      kpis: [kpi("Daily active users", "24.8K", "+3.9%", "up", true, "vs last week", dau.slice(-12)), kpi("Uptime (30d)", "99.96%", "+0.02", "up", true, "1 incident, 17 min", [99.9,99.92,99.95,99.9,99.94,99.97,99.95,99.96,99.98,99.94,99.94,99.96]), kpi("Open bugs", "57", "-8", "down", true, "6 critical", [78,74,71,69,70,66,63,65,61,60,65,57]), kpi("Deploys this week", "18", "+4", "up", true, "0 rollbacks", [11,12,12,14,13,15,14,16,15,14,14,18])],
+      main: { type: "line", title: "Daily active users", w: 8, unit: "#", labels: DAYS14, series: [{ name: "DAU", data: dau }] },
+      side: { type: "bar", title: "Open bugs by severity", w: 4, unit: "#", labels: ["Critical","High","Medium","Low"], series: [{ name: "Bugs", data: [6,14,22,15] }] },
+      table: { type: "table", title: "Sprint 42 — in flight", w: 8, columns: ["Item","Owner","Type","Points","ETA","Status"], rows: [["SSO login loop fix","Ana K.","Bug","5","Sep 12","crit"],["Bulk edit (beta)","Sam O.","Feature","8","Sep 18","good"],["Mobile upload crash","Lee W.","Bug","3","Sep 13","warn"],["Export performance","Ana K.","Improvement","5","Sep 19","good"],["Billing page redesign","Sam O.","Feature","13","Sep 26","neutral"]] },
+      list: { type: "list", title: "Incidents", w: 4, items: [{ text: "SSO loop affecting 3 enterprise accounts — hotfix in review", status: "crit", meta: "2d" }, { text: "API p95 latency up 22% since Tuesday", status: "warn", meta: "3d" }, { text: "Fall Launch: 0 sev-1s in the first week", status: "good", meta: "wk" }] } },
+    success: { name: "Customer Success", role: "Customer Success Manager", keys: ["customer success","churn","retention","renewal","renewals","nrr","account health","accounts","upsell","expansion","onboarding customers","csm"],
+      why: "Customer success leads with retention and the accounts at risk, so renewals never surprise anyone.",
+      kpis: [kpi("Net revenue retention", nrr[11] + "%", "+0.8 pts", "up", true, "trailing 12 months", nrr), kpi("Logo churn", "1.8%", "-0.3 pts", "down", true, "monthly", [2.6,2.5,2.4,2.4,2.3,2.2,2.2,2.1,2.0,2.1,2.1,1.8]), kpi("Accounts at risk", "6", "+2", "up", false, "health score < 50", [3,3,4,3,4,5,4,4,5,4,4,6]), kpi("Renewals due (30d)", "$640K", "", "flat", null, "11 accounts", [420,480,510,390,560,600,470,520,610,580,590,640])],
+      main: { type: "line", title: "Net revenue retention", w: 8, unit: "%", labels: MONTHS, series: [{ name: "NRR", data: nrr }] },
+      side: { type: "donut", title: "Account health", w: 4, labels: ["Healthy","Watch","At risk"], data: [71,23,6] },
+      table: { type: "table", title: "At-risk accounts", w: 8, columns: ["Account","ARR","Health","Renewal","Owner","Status"], rows: [["Halvorsen Retail Group","$186K","38","Oct 14","Dana R.","crit"],["Beacon Financial","$94K","42","Nov 2","Luis A.","crit"],["Summit Outdoor Co.","$61K","47","Oct 28","Dana R.","warn"],["Ridgeline Manufacturing","$48K","49","Dec 9","Luis A.","warn"],["Cobalt Health","$142K","55","Jan 15","Priya N.","neutral"]] },
+      list: { type: "list", title: "Renewals & plays", w: 4, items: [{ text: "Halvorsen exec sponsor left — schedule new champion intro", status: "crit", meta: "wk" }, { text: "Beacon usage down 40% after the billing issue", status: "crit", meta: "3d" }, { text: "Cobalt Health expansion: +2 seats signed", status: "good", meta: "today" }] } }
+  };
+  const ORDER = ["sales","marketing","support","finance","people","ops","inventory","product","success"];
+
+  // =====================================================================
+  //  PLANNING ENGINE — request → plan → dashboard spec
+  // =====================================================================
+  const norm = (s) => " " + String(s || "").toLowerCase().replace(/[^a-z0-9&'’ -]/g, " ").replace(/\s+/g, " ") + " ";
+  function domainHits(text) {
+    // [{key, pos}] ordered by where the domain is first mentioned in the request
+    const t = norm(text); const found = [];
+    for (const k of ORDER) { const d = D[k]; let pos = Infinity; for (const key of d.keys) { const re = new RegExp("(^| )" + key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(s|es)?( |$)"); const m = re.exec(t); if (m && m.index < pos) pos = m.index; } if (pos < Infinity) found.push({ key: k, pos }); }
+    return found.sort((a, b) => a.pos - b.pos);
+  }
+  function detectDomains(text) { return domainHits(text).map((x) => x.key); }
+  function splitAddRemove(text) {
+    // domains mentioned after a remove-verb are removals, until an add-verb appears
+    const t = norm(text); const verbs = [];
+    const re = /(^| )(remove|drop|hide|get rid of|without|take out|delete|add|include|also|show|plus|bring in|put in)( |$)/g; let m;
+    while ((m = re.exec(t))) verbs.push({ pos: m.index, kind: /remove|drop|hide|get rid of|without|take out|delete/.test(m[2]) ? "remove" : "add" });
+    const add = [], remove = [];
+    for (const h of domainHits(text)) { let kind = "add"; for (const v of verbs) if (v.pos < h.pos) kind = v.kind; (kind === "remove" ? remove : add).push(h.key); }
+    return { add, remove };
+  }
+  function detectRole(text) {
+    const s = String(text || "").replace(/\s+/g, " ").trim();
+    const pats = [
+      /(?:dashboard|view|overview|report|page)\s+for\s+(?:a|an|the|our|my)?\s*([^,.;:!?]+?)(?=\s+(?:at|in|who|that|which|covering|tracking|managing|responsible|with|needing|needs|wants|looking|to see|to track|to monitor|showing|that shows|for)\b|[,.;:!?]|$)/i,
+      /\bfor\s+(?:a|an|the|our|my)\s+([^,.;:!?]+?)(?=\s+(?:at|in|who|that|which|covering|tracking|managing|responsible|with|needing|needs|wants|looking|to see|to track|to monitor|showing|that shows)\b|[,.;:!?]|$)/i,
+      /\b(?:i am|i'm|as|as a|as an)\s+(?:a|an|the)?\s*([^,.;:!?]+?)(?=\s+(?:at|in|who|that|which|and|covering|tracking|managing|with|needing|looking)\b|[,.;:!?]|$)/i,
+      /^(?:a|an|the)\s+([^,.;:!?]+?)(?=\s+(?:at|in|who|that|which|covering|tracking|managing|responsible|with|needing|needs|wants|looking|to see|to track|to monitor|showing)\b|[,.;:!?]|$)/i
+    ];
+    for (const re of pats) { const m = s.match(re); if (m) { let r = m[1].trim().replace(/^(?:build|create|make|design|show me|give me)\s+/i, ""); if (r && !/dashboard|report|chart|widget|data/i.test(r) && r.split(" ").length <= 7) return r; } }
+    return null;
+  }
+  function detectCompany(text) {
+    const m = String(text || "").match(/\bat\s+((?:[A-Z][\w&'’.-]*)(?:\s+(?:[A-Z][\w&'’.-]*|of|and|&|the))*)/);
+    if (!m) return null; let c = m[1].replace(/\s+(?:who|that|which|and|the|of|&)$/i, "").trim(); return c.split(" ").length <= 5 ? c : null;
+  }
+  const titleCase = (s) => s.replace(/\b([a-z])/g, (m) => m.toUpperCase()).replace(/\b(Of|And|The|For|At|In|Vp|Ceo|Coo|Cfo|Cmo|Cto|Hr|It|Cx|Cs)\b/g, (m) => ({ Of: "of", And: "and", The: "the", For: "for", At: "at", In: "in", Vp: "VP", Ceo: "CEO", Coo: "COO", Cfo: "CFO", Cmo: "CMO", Cto: "CTO", Hr: "HR", It: "IT", Cx: "CX", Cs: "CS" }[m]));
+
+  function roleDomains(role) {
+    const r = norm(role);
+    if (/\b(ceo|founder|owner|president|general manager|executive|managing director|coo|gm)\b/.test(r)) return ["sales","finance","people"];
+    if (/\b(cfo|controller|accountant|finance)\b/.test(r)) return ["finance","sales"];
+    if (/\b(cmo|growth|marketing)\b/.test(r)) return ["marketing","sales"];
+    if (/\b(cto|engineer|engineering|developer|product)\b/.test(r)) return ["product","support"];
+    if (/\b(revenue|revops|rev ops)\b/.test(r)) return ["sales","marketing","success"];
+    if (/\b(customer experience|cx)\b/.test(r)) return ["support","success","sales"];
+    if (/\b(store|retail|shop)\b/.test(r)) return ["sales","inventory","people"];
+    if (/\b(sales|account)\b/.test(r)) return ["sales"];
+    if (/\b(support|service|helpdesk)\b/.test(r)) return ["support"];
+    if (/\b(hr|people|talent|recruit\w*)\b/.test(r)) return ["people"];
+    if (/\b(ops|operations|warehouse|logistics|plant)\b/.test(r)) return ["ops"];
+    return [];
+  }
+
+  function plan(text, prev) {
+    const t = norm(text);
+    const domains = detectDomains(text);
+    const bonusAsk = /anything else|what else|anything you think|you think|useful|helpful|missing|improve|suggest|recommend|more insight|insights|make it better|add more|else/.test(t);
+    const removeAsk = /(^| )(remove|drop|hide|get rid of|without|take out|delete)( |$)/.test(t);
+    const simplerAsk = /simpler|simplify|fewer|less busy|too much|minimal|clean up|condense/.test(t);
+    const role = detectRole(text), company = detectCompany(text);
+    const looksNew = !prev || /(^| )(dashboard|view) for( |$)/.test(t) || (role && role.toLowerCase() !== (prev.role || "").toLowerCase() && domains.length >= 1 && !/(^| )(add|include|also|show|plus|and|remove|drop|hide)( |$)/.test(t.slice(0, 12)));
+    let p;
+    if (!prev || looksNew) {
+      let ds = domains.slice();
+      const rd = role ? roleDomains(role) : [];
+      // the person's own function leads the dashboard
+      if (rd.length && ds.includes(rd[0])) ds = [rd[0], ...ds.filter((d) => d !== rd[0])];
+      rd.forEach((d) => { if (!ds.includes(d)) ds.push(d); });
+      if (!ds.length) ds = ["sales","finance","support"];
+      p = { role: role ? titleCase(role) : null, company, domains: ds.slice(0, 5), bonus: bonusAsk && !domains.length, compact: simplerAsk, changes: ["new"], explicitRole: !!role };
+    } else {
+      p = { ...prev, domains: prev.domains.slice(), changes: [] };
+      const { add, remove } = removeAsk ? splitAddRemove(text) : { add: domains, remove: [] };
+      if (remove.length) { p.domains = p.domains.filter((d) => !remove.includes(d)); p.changes.push("removed:" + remove.join(",")); }
+      const added = add.filter((d) => !p.domains.includes(d)); if (added.length) { p.domains.push(...added); p.changes.push("added:" + added.join(",")); }
+      if (!p.domains.length) p.domains = ["sales"];
+      if (bonusAsk) { p.bonus = true; p.changes.push("bonus"); }
+      if (simplerAsk) { p.compact = true; p.changes.push("compact"); }
+      if (/bring back|not simpler|more detail|expand/.test(t)) { p.compact = false; p.changes.push("expand"); }
+      if (role && !p.explicitRole) { p.role = titleCase(role); p.explicitRole = true; p.changes.push("role"); }
+      if (company) p.company = company;
+      if (!p.changes.length) { p.bonus = true; p.changes.push("bonus"); }
+      p.domains = p.domains.slice(0, 6);
+    }
+    return p;
+  }
+
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  function compose(p) {
+    const ds = p.domains.map((k) => D[k]).filter(Boolean);
+    const primary = ds[0];
+    const roleName = p.role || (ds.length === 1 ? primary.role : ds.length === 2 ? `${ds[0].name} & ${ds[1].name} Lead` : `${ds.slice(0, -1).map((d) => d.name).join(", ")} & ${ds[ds.length - 1].name} Lead`);
+    const widgets = [];
+    // KPI row: 4 tiles, spread across domains
+    const perDomain = ds.length === 1 ? [4] : ds.length === 2 ? [2, 2] : ds.length === 3 ? [2, 1, 1] : [1, 1, 1, 1];
+    ds.slice(0, 4).forEach((d, i) => d.kpis.slice(0, perDomain[i]).forEach((k) => widgets.push(clone(k))));
+    // sections
+    ds.forEach((d) => {
+      const sec = ds.length > 1 ? d.name : null;
+      const main = clone(d.main), side = clone(d.side); main.section = sec; side.section = sec; widgets.push(main, side);
+      if (!p.compact) { const tbl = clone(d.table), lst = clone(d.list); tbl.section = sec; lst.section = sec; if (ds.length <= 3 || d === primary) widgets.push(tbl, lst); }
+    });
+    if (p.bonus) {
+      const s = "Also useful";
+      widgets.push(insights(p, ds, s), forecast(primary, s), priorities(ds, s));
+      if (!p.compact && primary.bar) { const b = clone(primary.bar); b.section = s; b.w = 6; widgets.push(b, goals(ds, s)); }
+    }
+    const kpiNames = widgets.filter((w) => w.type === "kpi").map((w) => w.title.toLowerCase());
+    const rationale = ds.length === 1
+      ? `${primary.why} The tiles up top are ${listWords(kpiNames)} — the numbers a ${roleName.toLowerCase()} checks before anything else.`
+      : `Up top: ${listWords(kpiNames)} — one glance across ${listWords(ds.map((d) => d.name.toLowerCase()))}. ${ds.slice(0, 2).map((d) => d.why).join(" ")}`;
+    const title = p.company ? `${p.company} · ${roleName}` : `${roleName} Dashboard`;
+    const focus = ds.length === 1 ? primary.kpis[0].title : ds.slice(0, 3).map((d) => d.name).join(" · ");
+    return { title, subtitle: subtitleFor(ds, p), persona: { role: roleName, company: p.company || "", focus }, rationale, accent: ACCENTS[ds[0] === D.support ? 1 : ds[0] === D.finance ? 2 : ds[0] === D.marketing ? 3 : ds[0] === D.people ? 4 : 0], widgets };
+  }
+  const ACCENTS = ["#2dd4bf", "#60a5fa", "#a3e635", "#f472b6", "#fbbf24"];
+  const listWords = (a) => a.length <= 1 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+  const subtitleFor = (ds, p) => ds.length === 1 ? `A daily view of ${ds[0].name.toLowerCase()} — what changed, what needs a decision, and what to do next.` : `${listWords(ds.map((d) => d.name))} in one view — the numbers first, then what needs attention today.`;
+  function insights(p, ds, section) {
+    const pool = {
+      sales: { tone: "warn", k: "Sales", t: "Revenue is 3% under target for the month while win rate is up — the gap is deal size, not conversion. Worth a look at discounting on mid-market deals." },
+      marketing: { tone: "good", k: "Marketing", t: "Paid search is producing leads at $44 each and organic at roughly $20 — shifting 10% of LinkedIn budget to organic content would net ~60 more leads a month." },
+      support: { tone: "crit", k: "Customer service", t: "Ticket backlog is up 12% since the Fall Launch and SLA breaches doubled. Two of the three urgent escalations trace back to the same SSO bug — one engineering fix clears both." },
+      finance: { tone: "warn", k: "Finance", t: "Overdue receivables reached $92K; collecting the two largest invoices would add a month of runway." },
+      people: { tone: "good", k: "People", t: "Time to hire fell to 31 days and attrition is at a 12-month low — the hiring plan is on track for the Q4 headcount target." },
+      ops: { tone: "warn", k: "Operations", t: "Newark carrier misses account for most late orders this week; a backup carrier on Newark alone would lift on-time rate back above target." },
+      inventory: { tone: "crit", k: "Inventory", t: "SKU 4471 has four days of stock and a 21-day supplier lead time — expedite now or expect a two-week stock-out." },
+      product: { tone: "warn", k: "Product", t: "API latency is up 22% since Tuesday and correlates with the DAU jump — worth scaling ahead of next week's campaign." },
+      success: { tone: "crit", k: "Customer success", t: "Two at-risk accounts ($280K ARR) renew within 60 days; both are tied to open support issues, so resolving those is the retention play." }
+    };
+    const items = ds.slice(0, 3).map((d) => pool[Object.keys(D).find((k) => D[k] === d)]);
+    if (ds.length < 3) items.push({ tone: "good", k: "Across the board", t: "Customer names repeat across sales, support and finance — Halvorsen and Beacon show up in three lists. Treat them as one account conversation, not three tickets." });
+    return { type: "insights", title: "What the agent noticed", w: 12, section, items };
+  }
+  function forecast(d, section) {
+    const s = d.main.series[0].data.slice(); const last = s[s.length - 1], prev = s[Math.max(0, s.length - 4)]; const g = Math.pow(last / prev, 1 / 3) || 1.01;
+    const hist = s.slice(-6), fut = [1, 2, 3, 4].map((i) => +(last * Math.pow(g, i)).toFixed(0));
+    const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; const lastL = d.main.labels[d.main.labels.length - 1]; const mi = MN.indexOf(lastL); const labels = d.main.labels.slice(-6).concat(mi >= 0 ? [1,2,3,4].map((i) => MN[(mi + i) % 12]) : ["+1", "+2", "+3", "+4"]);
+    return { type: "line", title: `${d.main.series[0].name} — 4-period forecast`, w: 8, unit: d.main.unit, labels, section, series: [{ name: "Actual", data: hist.concat([null, null, null, null]) }, { name: "Forecast", data: Array(5).fill(null).concat(fut).map((v, i) => (i === 5 ? last : v)) }] };
+  }
+  function priorities(ds, section) {
+    const pool = { sales: "Call Beacon Financial — 11 days silent on pricing", marketing: "Pause the LinkedIn campaign (CPL 3× target)", support: "Push the SSO hotfix — clears 2 urgent escalations", finance: "Chase Halvorsen INV-2291 ($48K, 30 days late)", people: "Confirm Monday's 3 new-hire setups", ops: "Line up a backup carrier for Newark", inventory: "Expedite SKU 4471 from Summit Supply", product: "Review API latency before next week's campaign", success: "Book a new champion intro at Halvorsen" };
+    return { type: "todo", title: "Priorities today", w: 4, section, items: ds.slice(0, 5).map((d) => pool[Object.keys(D).find((k) => D[k] === d)]).concat(["Share this dashboard with the team"]) };
+  }
+  function goals(ds, section) {
+    const pool = { sales: { label: "Q3 quota", value: 84, target: 100, unit: "%" }, marketing: { label: "MQL target (month)", value: 1284, target: 1500, unit: "" }, support: { label: "Backlog under 100", value: 148, target: 100, unit: "", invert: true }, finance: { label: "Collect AR > 30d", value: 38, target: 92, unit: "K" }, people: { label: "Open roles filled", value: 5, target: 14, unit: "" }, ops: { label: "On-time rate", value: 94.2, target: 96, unit: "%" }, inventory: { label: "SKUs restocked", value: 9, target: 23, unit: "" }, product: { label: "Critical bugs closed", value: 4, target: 10, unit: "" }, success: { label: "Renewals secured", value: 410, target: 640, unit: "K" } };
+    return { type: "progress", title: "Goals this quarter", w: 6, section, items: ds.slice(0, 4).map((d) => pool[Object.keys(D).find((k) => D[k] === d)]) };
+  }
+  function changeSummary(p, spec) {
+    const c = p.changes || []; const bits = [];
+    for (const ch of c) {
+      if (ch.startsWith("added:")) bits.push(`added ${listWords(ch.slice(6).split(",").map((k) => D[k].name.toLowerCase()))}`);
+      else if (ch.startsWith("removed:")) bits.push(`removed ${listWords(ch.slice(8).split(",").map((k) => D[k].name.toLowerCase()))}`);
+      else if (ch === "bonus") bits.push("added what I'd want in their seat — an insights panel, a short forecast, today's priorities and goal progress");
+      else if (ch === "compact") bits.push("trimmed it to the essentials");
+      else if (ch === "expand") bits.push("brought the detail back");
+      else if (ch === "role") bits.push(`retitled it for a ${spec.persona.role}`);
+    }
+    return bits.length ? `<b>Done</b> — ${listWords(bits)}. ${spec.widgets.length} widgets now.` : "";
+  }
+
+  // =====================================================================
+  //  RENDERER
+  // =====================================================================
+  const PALETTE = ["#2dd4bf","#a78bfa","#fbbf24","#fb7185","#60a5fa","#34d399","#f472b6"];
+  const $ = (s) => document.querySelector(s);
+  const grid = $("#grid"), head = $("#head"), dash = $("#dash"), input = $("#input"), sendBtn = $("#send"), reply = $("#reply"), replyTxt = $("#replyTxt"), status = $("#status");
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmt = (n, unit) => { if (typeof n !== "number" || !isFinite(n)) return String(n ?? ""); const a = Math.abs(n); let s = a >= 1e9 ? (n / 1e9).toFixed(1) + "B" : a >= 1e6 ? (n / 1e6).toFixed(1) + "M" : a >= 1e4 ? (n / 1e3).toFixed(0) + "K" : a >= 1e3 ? (n / 1e3).toFixed(1) + "K" : (Number.isInteger(n) ? n.toString() : n.toFixed(1)); if (unit === "$") return "$" + s; if (unit === "%") return s + "%"; if (unit === "K") return "$" + s + "K"; if (unit && unit !== "#") return s + " " + unit; return s; };
+  const toast = (t) => { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove("on"), 3200); };
+  const hexOk = (h) => typeof h === "string" && /^#[0-9a-f]{6}$/i.test(h);
+  const lum = (h) => { const n = parseInt(h.slice(1), 16); return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255; };
+  const hexA = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; };
+  const setStatus = (t, live) => { status.querySelector("span").textContent = t; status.querySelector("i").style.background = live ? "var(--good)" : "var(--warn)"; };
+  let charts = [];
+
+  function applyAccent(hex) { const a = hexOk(hex) && lum(hex) > 0.42 ? hex : "#2dd4bf"; document.documentElement.style.setProperty("--accent", a); document.documentElement.style.setProperty("--accent-ink", lum(a) > 0.6 ? "#101418" : "#ffffff"); PALETTE[0] = a; }
+  function spark(data, good) {
+    const d = (data || []).map(Number).filter((x) => isFinite(x)); if (d.length < 2) return "";
+    const W = 160, H = 38, P = 3, min = Math.min(...d), max = Math.max(...d), r = max - min || 1;
+    const pts = d.map((v, i) => [P + (i * (W - 2 * P)) / (d.length - 1), H - P - ((v - min) / r) * (H - 2 * P)]);
+    const line = pts.map((p) => p.map((x) => x.toFixed(1)).join(",")).join(" ");
+    const area = `M${pts[0][0]},${H} L${line.replace(/ /g, " L")} L${pts[pts.length - 1][0]},${H} Z`;
+    const col = good === false ? "var(--crit)" : good === true ? "var(--good)" : "var(--accent)"; const id = "g" + Math.random().toString(36).slice(2, 8); const last = pts[pts.length - 1];
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".35"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#${id})"/><polyline points="${line}" fill="none" stroke="${col}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.4" fill="${col}"/></svg>`;
+  }
+  const TAGS = { good: "On track", warn: "At risk", crit: "Critical", info: "Info", neutral: "Normal" };
+  function widgetEl(w) {
+    const el = document.createElement("div"); const span = [3,4,6,8,12].includes(Number(w.w)) ? Number(w.w) : 4;
+    el.className = "w " + (w.type || ""); el.style.setProperty("--w", span);
+    const title = `<h3>${esc(w.title || "")}${w.unit && w.unit !== "#" ? `<span>${esc(w.unit)}</span>` : ""}</h3>`;
+    switch (w.type) {
+      case "kpi": { const tr = ["up","down","flat"].includes(w.trend) ? w.trend : "flat"; const arrow = tr === "up" ? "↑" : tr === "down" ? "↓" : "→"; const cls = w.good === false ? (tr === "flat" ? "flat" : "down") : w.good === true ? (tr === "flat" ? "flat" : "up") : "flat"; el.innerHTML = `${title}<div class="row"><div class="val">${esc(w.value)}</div>${w.delta ? `<span class="delta ${cls}">${arrow} ${esc(w.delta)}</span>` : ""}</div>${spark(w.spark, w.good)}${w.sub ? `<div class="sub">${esc(w.sub)}</div>` : ""}`; return el; }
+      case "line": case "bar": case "donut": { el.innerHTML = `${title}<div class="chart"><canvas></canvas></div>`; if (span >= 8) el.classList.add("tall"); el._chart = w; return el; }
+      case "table": { const cols = w.columns || [], rows = w.rows || []; const isNum = (v) => /^[-+$€£]?\s?[\d,.]+\s?(%|[KMB]|pts|h|m|s|d|x)?$/i.test(String(v).trim()) || /^\d+d \d+h$/.test(String(v)); const numCol = cols.map((_, i) => rows.length && rows.every((r) => isNum(r[i] ?? "") || TAGS[String(r[i]).toLowerCase()])); el.innerHTML = `${title}<div class="tblwrap"><table><thead><tr>${cols.map((c, i) => `<th class="${numCol[i] ? "num" : ""}">${esc(c)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${cols.map((_, i) => { const v = r[i] ?? ""; const s = String(v).toLowerCase(); return TAGS[s] ? `<td class="${numCol[i] ? "num" : ""}"><span class="tag ${s}">${cols[i].toLowerCase() === "priority" ? { crit: "Urgent", warn: "High", neutral: "Normal", good: "Low", info: "Low" }[s] : TAGS[s]}</span></td>` : `<td class="${numCol[i] ? "num" : ""}">${esc(v)}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`; return el; }
+      case "list": { el.innerHTML = `${title}<div class="list">${(w.items || []).map((it) => `<div class="item ${["good","warn","crit","info"].includes(it.status) ? it.status : ""}"><i></i><div>${esc(it.text)}</div><div class="m">${esc(it.meta || "")}</div></div>`).join("")}</div>`; return el; }
+      case "progress": { el.innerHTML = `${title}<div class="prog">${(w.items || []).map((it) => { const v = Number(it.value) || 0, t = Number(it.target) || 100; let pctv = it.invert ? Math.max(0, Math.min(100, (t / v) * 100)) : Math.max(0, Math.min(100, (v / t) * 100)); const cls = pctv < 40 ? "crit" : pctv < 70 ? "warn" : ""; return `<div class="p"><div>${esc(it.label)}</div><div class="v">${esc(fmt(v, it.unit))} / ${esc(fmt(t, it.unit))}</div><div class="bar"><b class="${cls}" style="width:${pctv.toFixed(1)}%"></b></div></div>`; }).join("")}</div>`; return el; }
+      case "insights": { el.innerHTML = `${title}<div class="ins-grid">${(w.items || []).map((it) => `<div class="ins ${esc(it.tone || "")}"><b>${esc(it.k)}</b>${esc(it.t)}</div>`).join("")}</div>`; return el; }
+      case "todo": { el.innerHTML = `${title}<div class="todo">${(w.items || []).map((t, i) => `<label><input type="checkbox" id="todo-${i}-${Math.random().toString(36).slice(2, 6)}"><span>${esc(t)}</span></label>`).join("")}</div>`; return el; }
+      default: el.innerHTML = title; return el;
+    }
+  }
+  function drawChart(el, w) {
+    if (!window.Chart) return;
+    const ctx = el.querySelector("canvas"); const labels = (w.labels || []).map(String);
+    const css = getComputedStyle(document.documentElement); const muted = css.getPropertyValue("--muted").trim(), line = css.getPropertyValue("--line").trim(), surf = css.getPropertyValue("--surface2").trim(), text = css.getPropertyValue("--text").trim();
+    const base = { responsive: true, maintainAspectRatio: false, animation: { duration: 600 }, plugins: { legend: { display: false }, tooltip: { backgroundColor: surf, titleColor: text, bodyColor: text, borderColor: line, borderWidth: 1, padding: 10, cornerRadius: 8, callbacks: { label: (c) => ` ${c.dataset.label ? c.dataset.label + ": " : ""}${fmt(c.parsed.y ?? c.parsed.x ?? c.parsed, w.unit)}` } } } };
+    let cfg;
+    if (w.type === "donut") {
+      const data = (w.data || []).map(Number);
+      cfg = { type: "doughnut", data: { labels, datasets: [{ data, backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length]), borderColor: css.getPropertyValue("--surface").trim(), borderWidth: 3, hoverOffset: 6 }] }, options: { ...base, cutout: "68%", plugins: { ...base.plugins, legend: { display: true, position: "right", labels: { color: muted, boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: "circle", padding: 12, font: { family: "Manrope", size: 12 } } }, tooltip: { ...base.plugins.tooltip, callbacks: { label: (c) => { const tot = data.reduce((a, b) => a + b, 0) || 1; return ` ${c.label}: ${Math.round((c.parsed / tot) * 100)}%`; } } } } } };
+    } else {
+      const series = (w.series || []).slice(0, 4); const isLine = w.type === "line";
+      const datasets = series.map((s, i) => { const col = PALETTE[i % PALETTE.length]; const dashed = /target|forecast|budget|plan|last year|prior/i.test(s.name || ""); return isLine
+        ? { label: s.name, data: (s.data || []).map((v) => (v == null ? null : Number(v))), borderColor: col, backgroundColor: i === 0 ? hexA(col, 0.12) : "transparent", fill: i === 0 ? "origin" : false, tension: 0.35, borderWidth: 2, pointRadius: labels.length > 14 ? 0 : 2.5, pointHoverRadius: 5, pointBackgroundColor: col, borderDash: dashed ? [5, 4] : [], spanGaps: false }
+        : { label: s.name, data: (s.data || []).map(Number), backgroundColor: series.length === 1 ? labels.map((_, j) => hexA(col, 0.85 - (j % 2) * 0.1)) : col, borderRadius: 5, borderSkipped: false, maxBarThickness: 34 }; });
+      const scales = { x: { grid: { display: false }, ticks: { color: muted, font: { family: "Manrope", size: 11 }, maxRotation: 0, autoSkip: true }, stacked: !!w.stacked, border: { color: line } }, y: { grid: { color: line }, ticks: { color: muted, font: { family: "JetBrains Mono", size: 10.5 }, callback: (v) => fmt(v, w.unit), maxTicksLimit: 6 }, stacked: !!w.stacked, border: { display: false }, beginAtZero: !isLine } };
+      cfg = { type: isLine ? "line" : "bar", data: { labels, datasets }, options: { ...base, indexAxis: w.horizontal ? "y" : "x", interaction: { mode: "index", intersect: false }, scales: w.horizontal ? { x: { ...scales.y, grid: { color: line } }, y: { ...scales.x } } : scales, plugins: { ...base.plugins, legend: { display: series.length > 1, position: "top", align: "end", labels: { color: muted, boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: "circle", padding: 14, font: { family: "Manrope", size: 11.5 } } } } } };
+    }
+    charts.push(new Chart(ctx, cfg));
+  }
+  function render(s, viaClaude) {
+    charts.forEach((c) => { try { c.destroy(); } catch (e) {} }); charts = [];
+    applyAccent(s.accent);
+    const p = s.persona || {};
+    dash.hidden = false;
+    head.innerHTML = `<div class="t"><div class="eyebrow">Custom dashboard${p.company ? " · " + esc(p.company) : ""}</div><h2>${esc(s.title)}</h2>${s.subtitle ? `<p>${esc(s.subtitle)}</p>` : ""}</div><div class="persona">${p.role ? `<span class="pill"><span class="k">Built for</span> ${esc(p.role)}</span>` : ""}${p.focus ? `<span class="pill"><span class="k">Focus</span> ${esc(p.focus)}</span>` : ""}${viaClaude ? `<span class="pill ai">✦ Planned with Claude</span>` : ""}</div>`;
+    grid.innerHTML = ""; let lastSection = null; const pending = [];
+    (s.widgets || []).forEach((w, i) => { const sec = w.section || null; if (sec && sec !== lastSection) { const h = document.createElement("div"); h.className = "section"; h.textContent = sec; grid.appendChild(h); } if (sec) lastSection = sec; const el = widgetEl(w); el.style.animationDelay = (Math.min(i, 16) * 45) + "ms"; grid.appendChild(el); if (el._chart) pending.push([el, w]); });
+    requestAnimationFrame(() => pending.forEach(([el, w]) => { try { drawChart(el, w); } catch (e) { console.warn("chart", e); } }));
+    document.title = (s.title ? s.title + " · " : "") + "Vantage";
+  }
+
+  // =====================================================================
+  //  AGENT LOOP (engine always; Claude joins when the viewer has it)
+  // =====================================================================
+  let sample = null, current = null, busy = false, spec = null;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  let typeToken = 0;
+  async function type(html, ms = 12) {
+    // typewriter on text nodes only — html is our own markup; a newer call cancels an older one
+    const my = ++typeToken;
+    replyTxt.innerHTML = ""; const tmp = document.createElement("div"); tmp.innerHTML = html;
+    const walk = async (src, dst) => { for (const n of [...src.childNodes]) { if (my !== typeToken) return; if (n.nodeType === 3) { const t = document.createTextNode(""); dst.appendChild(t); const cur = document.createElement("span"); cur.className = "cur"; dst.appendChild(cur); for (const ch of n.textContent) { if (my !== typeToken) { cur.remove(); return; } t.textContent += ch; if (ms) await sleep(ms); } cur.remove(); } else { const c = n.cloneNode(false); dst.appendChild(c); await walk(n, c); } } };
+    await walk(tmp, replyTxt);
+  }
+  function showSteps(steps) { reply.hidden = false; replyTxt.innerHTML = `<div class="steps">${steps.map((s, i) => `<div class="step ${i === 0 ? "on" : ""}"><i></i>${esc(s)}</div>`).join("")}</div>`; return (i) => { [...replyTxt.querySelectorAll(".step")].forEach((e, j) => { e.classList.toggle("done", j < i); e.classList.toggle("on", j === i); }); }; }
+
+  let apiOk = /^https?:$/.test(location.protocol) && !/claude\.ai$/.test(location.hostname);   // hosted build: /api/plan proxies to Claude with the owner's key
+  async function askClaude(text, prev) {
+    if (!sample && !apiOk) return null;
+    const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 9000);
+    const catalog = ORDER.map((k) => `${k}: ${D[k].name} (${D[k].keys.slice(0, 4).join(", ")})`).join("\n");
+    const prompt = `You are the planner for a dashboard-building agent. Map the user's request onto the available data domains and return ONLY a JSON object:
+{"role":"job title for the person (title case) or null","company":"company name if stated else null","domains":["keys from the catalog, most important first, 1-5"],"bonus":true|false,"remove":["domain keys to remove, follow-ups only"],"rationale":"1-2 sentences addressed to the user explaining why this layout fits them, mentioning the domains by name"}
+Catalog of data domains (key: name (examples)):
+${catalog}
+"bonus" = true when the user asks for extras, suggestions, anything else useful, or improvements.
+${prev ? `Current dashboard: role=${prev.role || "unknown"}, domains=${prev.domains.join(",")}. This is a FOLLOW-UP: keep existing domains unless asked to remove them, and add any newly requested ones.` : "This is a new request."}
+Request: ${text}`;
+    if (sample) {
+      try { const out = await sample.json(prompt, { modelTier: "quick", cache: false, signal: ctl.signal }); clearTimeout(timer); return out && typeof out === "object" ? out : null; }
+      catch (e) { clearTimeout(timer); if (e && (e.code === "not_granted" || e.code === "sampling_disabled" || e.code === "not_declared" || e.code === "capability_disabled")) sample = null; return null; }
+    }
+    try {
+      const r = await fetch("/api/plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt }), signal: ctl.signal });
+      clearTimeout(timer); if (r.status === 404) { apiOk = false; return null; } if (!r.ok) return null;
+      const out = await r.json(); return out && typeof out === "object" ? out : null;
+    } catch (e) { clearTimeout(timer); return null; }
+  }
+
+  async function build(text) {
+    text = (text || "").trim(); if (!text || busy) return;
+    busy = true; sendBtn.disabled = true; input.value = ""; autosize();
+    const followUp = !!current;
+    const step = showSteps(followUp ? ["Reading your change", "Updating the layout", "Refreshing data"] : ["Reading the brief", "Deciding what they check first", "Choosing charts & layout", "Loading data"]);
+    setStatus("building", true); dash.classList.add("dim");
+    const t0 = performance.now();
+    const claudeP = askClaude(text, current);
+    await sleep(500); step(1);
+    let p = plan(text, current); let viaClaude = false;
+    const c = await Promise.race([claudeP, sleep(followUp ? 4000 : 6000).then(() => undefined)]);
+    if (c && Array.isArray(c.domains)) {
+      const valid = c.domains.map((d) => String(d).toLowerCase()).filter((d) => D[d]);
+      if (valid.length) {
+        viaClaude = true;
+        if (!followUp) { p.domains = valid.slice(0, 5); if (c.role && !p.explicitRole) { p.role = String(c.role); p.explicitRole = true; } if (c.company && !p.company) p.company = String(c.company); if (c.bonus === true) p.bonus = true; }
+        else { const rm = (c.remove || []).map(String); p.domains = p.domains.filter((d) => !rm.includes(d)); valid.forEach((d) => { if (!p.domains.includes(d)) { p.domains.push(d); p.changes.push("added:" + d); } }); if (c.bonus === true && !p.bonus) { p.bonus = true; p.changes.push("bonus"); } if (!p.domains.length) p.domains = ["sales"]; }
+      }
+    }
+    step(2); await sleep(450); if (!followUp) { step(3); await sleep(400); }
+    spec = compose(p); if (viaClaude && c && typeof c.rationale === "string" && c.rationale.trim()) spec.rationale = c.rationale.trim();
+    current = p;
+    render(spec, viaClaude);
+    dash.classList.remove("dim"); setStatus("agent ready", true);
+    $("#h1").textContent = "Want to change anything?"; $("#lead").textContent = "Ask in plain English — add an area, remove one, or ask what else would be useful."; input.placeholder = "e.g. add marketing · remove the tables · add anything else you think may be useful"; $("#reset").hidden = false;
+    const secs = ((performance.now() - t0) / 1000).toFixed(1);
+    const summary = followUp ? changeSummary(p, spec) : "";
+    busy = false; sendBtn.disabled = false; input.focus();   // accept the next request while the reply is still typing
+    setTimeout(() => { if (!followUp) dash.scrollIntoView({ behavior: "smooth", block: "start" }); }, 200);
+    type((summary ? summary + " " : `<b>Built for ${esc(spec.persona.role)}</b> — ${spec.widgets.length} widgets in ${secs}s. `) + (followUp ? "" : esc(spec.rationale)), followUp ? 7 : 8);
+  }
+
+  // ---------- wiring ----------
+  function autosize() { input.style.height = "auto"; input.style.height = Math.min(180, input.scrollHeight) + "px"; }
+  input.addEventListener("input", autosize);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); build(input.value); } });
+  sendBtn.addEventListener("click", () => build(input.value));
+  $("#reset").addEventListener("click", () => { current = null; spec = null; dash.hidden = true; grid.innerHTML = ""; head.innerHTML = ""; reply.hidden = true; $("#h1").textContent = "Who is this dashboard for?"; $("#lead").textContent = "Describe the person and what they need to keep an eye on. The agent designs the rest."; input.placeholder = "e.g. A sales manager who needs to see sales, marketing, and open customer service tickets"; $("#reset").hidden = true; input.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR) { const mic = $("#mic"); mic.hidden = false; let rec = null;
+    mic.addEventListener("click", () => { if (rec) { rec.stop(); return; }
+      try { rec = new SR(); rec.lang = "en-US"; rec.interimResults = true; rec.continuous = false; let finalText = "";
+        rec.onresult = (ev) => { let interim = ""; for (const r of ev.results) { if (r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript; } input.value = (finalText + " " + interim).trim(); autosize(); };
+        rec.onerror = (ev) => { mic.classList.remove("rec"); rec = null; if (ev.error === "not-allowed" || ev.error === "service-not-allowed") { mic.hidden = true; toast("Microphone isn't available here — type instead."); } };
+        rec.onend = () => { mic.classList.remove("rec"); rec = null; if (finalText.trim()) build(finalText); };
+        rec.start(); mic.classList.add("rec"); toast("Listening… speak the request, then pause."); } catch (e) { mic.hidden = true; rec = null; } }); }
+
+  // connect Claude if this viewer has it (never required)
+  (async () => { try { sample = window.claude ? await claude.use("sample") : null; } catch (e) { sample = null; } if (apiOk) { try { const r = await fetch("/api/plan", { method: "GET" }); apiOk = r.ok; } catch (e) { apiOk = false; } } setStatus(sample || apiOk ? "agent ready · claude connected" : "agent ready", true); })();
+  window.__vantage = { plan, compose, D };
+})();
+</script>
+
+</body>
+</html>

@@ -293,7 +293,7 @@
       /\b(?:i am|i'm|as|as a|as an)\s+(?:a|an|the)?\s*([^,.;:!?]+?)(?=\s+(?:at|in|who|that|which|and|covering|tracking|managing|with|needing|looking)\b|[,.;:!?]|$)/i,
       /^(?:a|an|the)\s+([^,.;:!?]+?)(?=\s+(?:at|in|who|that|which|covering|tracking|managing|responsible|with|needing|needs|wants|looking|to see|to track|to monitor|showing)\b|[,.;:!?]|$)/i
     ];
-    for (const re of pats) { const m = s.match(re); if (m) { let r = m[1].trim().replace(/^(?:build|create|make|design|show me|give me)\s+/i, ""); if (r && !/dashboard|report|chart|widget|data/i.test(r) && r.split(" ").length <= 7) return r; } }
+    for (const re of pats) { const m = s.match(re); if (m) { let r = m[1].trim().replace(/^(?:build|create|make|design|show me|give me)\s+/i, "").replace(/\s+(?:instead|please|now|today)$/i, ""); if (r && !/dashboard|report|chart|widget|data/i.test(r) && r.split(" ").length <= 7) return r; } }
     return null;
   }
   function detectCompany(text) {
@@ -491,7 +491,7 @@
     applyAccent(s.accent);
     const p = s.persona || {};
     dash.hidden = false;
-    head.innerHTML = `<div class="t"><div class="eyebrow">Custom dashboard${p.company ? " · " + esc(p.company) : ""}</div><h2>${esc(s.title)}</h2>${s.subtitle ? `<p>${esc(s.subtitle)}</p>` : ""}</div><div class="persona">${p.role ? `<span class="pill"><span class="k">Built for</span> ${esc(p.role)}</span>` : ""}${p.focus ? `<span class="pill"><span class="k">Focus</span> ${esc(p.focus)}</span>` : ""}${viaClaude ? `<span class="pill ai">✦ Planned with Claude</span>` : ""}</div>`;
+    head.innerHTML = `<div class="t"><div class="eyebrow">Custom dashboard${p.company ? " · " + esc(p.company) : ""}</div><h2>${esc(s.title)}</h2>${s.subtitle ? `<p>${esc(s.subtitle)}</p>` : ""}</div><div class="persona">${p.role ? `<span class="pill"><span class="k">Built for</span> ${esc(p.role)}</span>` : ""}${p.focus ? `<span class="pill"><span class="k">Focus</span> ${esc(p.focus)}</span>` : ""}${viaClaude ? `<span class="pill ai">✦ Designed by Claude</span>` : ""}</div>`;
     grid.innerHTML = ""; let lastSection = null; const pending = [];
     (s.widgets || []).forEach((w, i) => { const sec = w.section || null; if (sec && sec !== lastSection) { const h = document.createElement("div"); h.className = "section"; h.textContent = sec; grid.appendChild(h); } if (sec) lastSection = sec; const el = widgetEl(w); el.style.animationDelay = (Math.min(i, 16) * 45) + "ms"; grid.appendChild(el); if (el._chart) pending.push([el, w]); });
     requestAnimationFrame(() => pending.forEach(([el, w]) => { try { drawChart(el, w); } catch (e) { console.warn("chart", e); } }));
@@ -514,58 +514,96 @@
   function showSteps(steps) { reply.hidden = false; replyTxt.innerHTML = `<div class="steps">${steps.map((s, i) => `<div class="step ${i === 0 ? "on" : ""}"><i></i>${esc(s)}</div>`).join("")}</div>`; return (i) => { [...replyTxt.querySelectorAll(".step")].forEach((e, j) => { e.classList.toggle("done", j < i); e.classList.toggle("on", j === i); }); }; }
 
   let apiOk = /^https?:$/.test(location.protocol) && !/claude\.ai$/.test(location.hostname);   // hosted build: /api/plan proxies to Claude with the owner's key
-  async function askClaude(text, prev) {
-    if (!sample && !apiOk) return null;
-    const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 9000);
-    const catalog = ORDER.map((k) => `${k}: ${D[k].name} (${D[k].keys.slice(0, 4).join(", ")})`).join("\n");
-    const prompt = `You are the planner for a dashboard-building agent. Map the user's request onto the available data domains and return ONLY a JSON object:
-{"role":"job title for the person (title case) or null","company":"company name if stated else null","domains":["keys from the catalog, most important first, 1-5"],"bonus":true|false,"remove":["domain keys to remove, follow-ups only"],"rationale":"1-2 sentences addressed to the user explaining why this layout fits them, mentioning the domains by name"}
-Catalog of data domains (key: name (examples)):
-${catalog}
-"bonus" = true when the user asks for extras, suggestions, anything else useful, or improvements.
-${prev ? `Current dashboard: role=${prev.role || "unknown"}, domains=${prev.domains.join(",")}. This is a FOLLOW-UP: keep existing domains unless asked to remove them, and add any newly requested ones.` : "This is a new request."}
-Request: ${text}`;
+  const RULES = `You are Vantage, an expert product designer and business analyst who designs custom dashboards for a specific person.
+The user describes a business employee (role, company, industry, what they care about). Design the dashboard THAT PERSON would actually want, with realistic, internally consistent dummy data that fits their industry and company size. Every dashboard must feel bespoke: invent plausible customer, product, region, campaign and people names that belong to THEIR world, and pick metrics specific to their role.
+
+Reply with ONLY one JSON object (no prose, no code fence) in exactly this shape:
+{
+ "title": "short dashboard name (max 6 words)",
+ "subtitle": "one sentence on what it helps them do",
+ "persona": {"role":"job title","company":"the company if stated, else a plausible invented one","focus":"3-5 words on their #1 priority"},
+ "rationale": "1-2 sentences addressed to the user explaining the key layout choices and why they fit this role",
+ "summary": "on a follow-up only: one sentence saying what you changed; else empty string",
+ "accent": "#hex color that suits the industry, bright enough to read on a dark background",
+ "widgets": [ ...7 to 9 widgets... ]
+}
+
+Widget shapes (w = width in a 12-column grid: 3, 4, 6, 8 or 12; each row's widths must sum to 12; optional "section":"Sales" groups consecutive widgets under a heading):
+{"type":"kpi","title":"Open tickets","value":"148","delta":"+12%","trend":"up|down|flat","good":true|false,"sub":"vs last week","spark":[8 numbers],"w":3}
+{"type":"line","title":"...","w":8,"unit":"$|%|#|min","labels":[6-8 period labels],"series":[{"name":"...","data":[...]}] (1-2 series)}
+{"type":"bar","title":"...","w":4,"unit":"...","labels":[4-6],"series":[{"name":"...","data":[...]}],"horizontal":false}
+{"type":"donut","title":"...","w":4,"labels":[3-5],"data":[...]}
+{"type":"table","title":"...","w":8,"columns":["Name","Owner","Value","Status"],"rows":[[...4-5 rows...]]}  (a cell equal to good/warn/crit/info/neutral renders as a status tag)
+{"type":"list","title":"Needs attention","w":4,"items":[{"text":"...","status":"good|warn|crit|info","meta":"2h ago"} x3-4]}
+{"type":"progress","title":"Goals","w":6,"items":[{"label":"...","value":72,"target":100,"unit":"%"} x3]}
+{"type":"insights","title":"What the agent noticed","w":12,"items":[{"k":"Sales","t":"one specific, data-backed observation with a recommendation","tone":"good|warn|crit"} x3]}
+{"type":"todo","title":"Priorities today","w":4,"items":["short action", ...4]}
+
+Rules:
+- Start with a row of 4 KPIs (w:3 each): the numbers this person checks first. "good" = whether the trend direction is good news for them.
+- Then, per area they asked about, one main chart (w:8) beside a donut/bar/list (w:4); use "section" labels when the request spans several areas (e.g. Sales, Marketing, Customer Service). Include at least one table and one list of things needing attention.
+- Data must agree with itself (KPI values match chart totals, donut shares make sense), with plausible trends and concrete labels (real months/weekdays, named products, people, regions). KPI "value" is a preformatted string ($1.24M, 94.2%, 3h 12m).
+- Keep strings concise. Never repeat the same names or numbers across different requests — tailor everything to this person.
+- On a follow-up, return the COMPLETE updated dashboard (all widgets), changing only what was asked and keeping the rest identical. If asked what else would be useful, ADD 3-4 genuinely useful widgets for this role (an insights panel, a forecast, priorities, goals) under a section "Also useful" and say what you added in "summary". If the follow-up describes a different person, start fresh.`;
+  const TYPES = new Set(["kpi","line","bar","donut","table","list","progress","insights","todo"]);
+  let turns = [];   // [{role, content}] — the last two exchanges, kept by the page
+  function sanitize(out) {
+    if (!out || typeof out !== "object" || !Array.isArray(out.widgets)) return null;
+    const widgets = out.widgets.filter((w) => w && typeof w === "object" && TYPES.has(w.type) && typeof w.title === "string").map((w) => { const c = { ...w }; c.w = [3,4,6,8,12].includes(Number(c.w)) ? Number(c.w) : (c.type === "kpi" ? 3 : c.type === "insights" ? 12 : 4); if (typeof c.section !== "string") delete c.section; return c; });
+    if (widgets.length < 4) return null;
+    return { title: String(out.title || "Dashboard"), subtitle: String(out.subtitle || ""), persona: { role: String((out.persona && out.persona.role) || ""), company: String((out.persona && out.persona.company) || ""), focus: String((out.persona && out.persona.focus) || "") }, rationale: String(out.rationale || ""), summary: String(out.summary || ""), accent: out.accent, widgets };
+  }
+  async function claudeSpec(text, followUp, signal) {
+    const request = followUp ? `Follow-up request: ${text}` : `Request: ${text}`;
+    let out = null;
     if (sample) {
-      try { const out = await sample.json(prompt, { modelTier: "quick", cache: false, signal: ctl.signal }); clearTimeout(timer); return out && typeof out === "object" ? out : null; }
-      catch (e) { clearTimeout(timer); if (e && (e.code === "not_granted" || e.code === "sampling_disabled" || e.code === "not_declared" || e.code === "capability_disabled")) sample = null; return null; }
-    }
-    try {
-      const r = await fetch("/api/plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt }), signal: ctl.signal });
-      clearTimeout(timer); if (r.status === 404) { apiOk = false; return null; } if (!r.ok) return null;
-      const out = await r.json(); return out && typeof out === "object" ? out : null;
-    } catch (e) { clearTimeout(timer); return null; }
+      try { out = await sample.json([{ role: "user", content: RULES }, ...turns, { role: "user", content: request }], { modelTier: "quick", cache: false, signal }); }
+      catch (e) { if (e && (e.code === "not_granted" || e.code === "sampling_disabled" || e.code === "not_declared" || e.code === "capability_disabled")) sample = null; console.warn("sample", e); return null; }
+    } else if (apiOk) {
+      try {
+        const r = await fetch("/api/plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ system: RULES, messages: [...turns, { role: "user", content: request }] }), signal });
+        if (r.status === 404) { apiOk = false; return null; } if (!r.ok) { console.warn("api", r.status, await r.text()); return null; }
+        out = await r.json();
+      } catch (e) { console.warn("api", e); return null; }
+    } else return null;
+    const spec = sanitize(out); if (!spec) { console.warn("bad spec", out); return null; }
+    turns.push({ role: "user", content: request }, { role: "assistant", content: JSON.stringify(spec) });
+    while (turns.length > 4) turns.splice(0, 2);
+    return spec;
   }
 
   async function build(text) {
     text = (text || "").trim(); if (!text || busy) return;
     busy = true; sendBtn.disabled = true; input.value = ""; autosize();
     const followUp = !!current;
-    const step = showSteps(followUp ? ["Reading your change", "Updating the layout", "Refreshing data"] : ["Reading the brief", "Deciding what they check first", "Choosing charts & layout", "Loading data"]);
+    const steps = followUp ? ["Reading your change", "Redesigning the layout", "Regenerating data", "Finishing"] : ["Reading the brief", "Deciding what they check first", "Choosing charts & layout", "Generating data", "Finishing"];
+    const step = showSteps(steps); let si = 0;
+    const live = !!(sample || apiOk);
+    const ticker = setInterval(() => { if (si < steps.length - 1) { si++; step(si); } }, live ? 2600 : 550);
     setStatus("building", true); dash.classList.add("dim");
     const t0 = performance.now();
-    const claudeP = askClaude(text, current);
-    await sleep(500); step(1);
-    let p = plan(text, current); let viaClaude = false;
-    const c = await Promise.race([claudeP, sleep(followUp ? 4000 : 6000).then(() => undefined)]);
-    if (c && Array.isArray(c.domains)) {
-      const valid = c.domains.map((d) => String(d).toLowerCase()).filter((d) => D[d]);
-      if (valid.length) {
-        viaClaude = true;
-        if (!followUp) { p.domains = valid.slice(0, 5); if (c.role && !p.explicitRole) { p.role = String(c.role); p.explicitRole = true; } if (c.company && !p.company) p.company = String(c.company); if (c.bonus === true) p.bonus = true; }
-        else { const rm = (c.remove || []).map(String); p.domains = p.domains.filter((d) => !rm.includes(d)); valid.forEach((d) => { if (!p.domains.includes(d)) { p.domains.push(d); p.changes.push("added:" + d); } }); if (c.bonus === true && !p.bonus) { p.bonus = true; p.changes.push("bonus"); } if (!p.domains.length) p.domains = ["sales"]; }
-      }
+    let s = null, viaClaude = false;
+    if (live) {
+      const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 45000);
+      s = await claudeSpec(text, followUp, ctl.signal); clearTimeout(timer);
+      viaClaude = !!s;
     }
-    step(2); await sleep(450); if (!followUp) { step(3); await sleep(400); }
-    spec = compose(p); if (viaClaude && c && typeof c.rationale === "string" && c.rationale.trim()) spec.rationale = c.rationale.trim();
-    current = p;
+    let p = current;
+    if (!s) {   // safety net: the built-in planner never fails
+      await sleep(live ? 0 : 900);
+      p = plan(text, current); s = compose(p); s.summary = followUp ? changeSummary(p, s).replace(/<[^>]+>/g, "") : "";
+      turns = [{ role: "user", content: followUp ? `Follow-up request: ${text}` : `Request: ${text}` }, { role: "assistant", content: JSON.stringify(s) }];
+    } else { p = current || { domains: [] }; }
+    clearInterval(ticker); step(steps.length);
+    spec = s; current = p;
     render(spec, viaClaude);
-    dash.classList.remove("dim"); setStatus("agent ready", true);
+    dash.classList.remove("dim"); setStatus(live ? "agent ready · claude connected" : "agent ready", true);
     $("#h1").textContent = "Want to change anything?"; $("#lead").textContent = "Ask in plain English — add an area, remove one, or ask what else would be useful."; input.placeholder = "e.g. add marketing · remove the tables · add anything else you think may be useful"; $("#reset").hidden = false;
     const secs = ((performance.now() - t0) / 1000).toFixed(1);
-    const summary = followUp ? changeSummary(p, spec) : "";
     busy = false; sendBtn.disabled = false; input.focus();   // accept the next request while the reply is still typing
     setTimeout(() => { if (!followUp) dash.scrollIntoView({ behavior: "smooth", block: "start" }); }, 200);
-    type((summary ? summary + " " : `<b>Built for ${esc(spec.persona.role)}</b> — ${spec.widgets.length} widgets in ${secs}s. `) + (followUp ? "" : esc(spec.rationale)), followUp ? 7 : 8);
+    const lead = followUp ? (spec.summary ? `<b>Done</b> — ${esc(spec.summary.replace(/^done\s*[—-]\s*/i, ""))} ` : `<b>Updated</b> — ${spec.widgets.length} widgets. `) : `<b>Built for ${esc(spec.persona.role || "you")}</b> — ${spec.widgets.length} widgets in ${secs}s. `;
+    type(lead + (followUp ? "" : esc(spec.rationale)), followUp ? 7 : 8);
   }
 
   // ---------- wiring ----------
@@ -573,7 +611,7 @@ Request: ${text}`;
   input.addEventListener("input", autosize);
   input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); build(input.value); } });
   sendBtn.addEventListener("click", () => build(input.value));
-  $("#reset").addEventListener("click", () => { current = null; spec = null; dash.hidden = true; grid.innerHTML = ""; head.innerHTML = ""; reply.hidden = true; $("#h1").textContent = "Who is this dashboard for?"; $("#lead").textContent = "Describe the person and what they need to keep an eye on. The agent designs the rest."; input.placeholder = "e.g. A sales manager who needs to see sales, marketing, and open customer service tickets"; $("#reset").hidden = true; input.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+  $("#reset").addEventListener("click", () => { current = null; spec = null; turns = []; dash.hidden = true; grid.innerHTML = ""; head.innerHTML = ""; reply.hidden = true; $("#h1").textContent = "Who is this dashboard for?"; $("#lead").textContent = "Describe the person and what they need to keep an eye on. The agent designs the rest."; input.placeholder = "e.g. A sales manager who needs to see sales, marketing, and open customer service tickets"; $("#reset").hidden = true; input.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); });
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (SR) { const mic = $("#mic"); mic.hidden = false; let rec = null;
     mic.addEventListener("click", () => { if (rec) { rec.stop(); return; }
